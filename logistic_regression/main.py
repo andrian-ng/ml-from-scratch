@@ -57,14 +57,14 @@ X_test = scaler.transform(X_test)
 # 4. Train Custom Logistic Regression
 # =====================================
 
-custom_model = LogisticRegression(learning_rate=0.01, n_iters=100000)
+custom_model = LogisticRegression(learning_rate=0.01, iterations=100000)
 
 custom_model.fit(X_train, y_train)
 
 custom_predictions = custom_model.predict(X_test)
 
 # Get probability predictions
-custom_probabilities = custom_model.predict_probability(X_test)
+custom_probabilities = custom_model.predict_proba(X_test)
 
 # =====================================
 # 5. Train Scikit-learn Logistic Regression
