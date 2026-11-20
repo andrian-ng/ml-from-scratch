@@ -10,15 +10,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 
 from sklearn.metrics import (
-	accuracy_score,
-	precision_score,
-	recall_score,
-	f1_score,
-	classification_report,
-	confusion_matrix
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    classification_report,
+    confusion_matrix
 )
-
-from decision_tree import DecisionTree
 
 
 # =====================================
@@ -41,11 +39,11 @@ print("Classes:", data.target_names)
 # =====================================
 
 X_train, X_test, y_train, y_test = train_test_split(
-	X,
-	y,
-	test_size=0.2,
-	random_state=42,
-	stratify=y
+    X,
+    y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
 )
 
 print("\nTrain size:", len(X_train))
@@ -53,315 +51,427 @@ print("Test size:", len(X_test))
 
 
 # =====================================
-# 3. Train From Scratch Decision Tree
+# 3. Model configurations
 # =====================================
 
-print("\n========== FROM SCRATCH ==========")
+models = {
+    "Custom - Gini": {
+        "custom": DecisionTree(
+            max_depth=3,
+            criterion="gini",
+            gain_ratio_=False
+        ),
+        "sklearn": DecisionTreeClassifier(
+            criterion="gini",
+            max_depth=3,
+            random_state=42
+        )
+    },
 
-custom_model = DecisionTree(max_depth=3)
+    "Custom - Entropy": {
+        "custom": DecisionTree(
+            max_depth=3,
+            criterion="entropy",
+            gain_ratio_=False
+        ),
+        "sklearn": DecisionTreeClassifier(
+            criterion="entropy",
+            max_depth=3,
+            random_state=42
+        )
+    },
 
-start = time.perf_counter()
-
-custom_model.fit(X_train, y_train)
-
-my_train_time = time.perf_counter() - start
-
-start = time.perf_counter()
-
-my_predictions = custom_model.predict(X_test)
-
-my_predict_time = time.perf_counter() - start
-
-
-# =====================================
-# 4. Train Scikit-learn Decision Tree
-# =====================================
-
-print("\n========== SCIKIT-LEARN ==========")
-
-sk_model = DecisionTreeClassifier(
-	criterion="gini",
-	max_depth=3,
-	random_state=42
-)
-
-start = time.perf_counter()
-
-sk_model.fit(X_train, y_train)
-
-sk_train_time = time.perf_counter() - start
-
-start = time.perf_counter()
-
-sk_predictions = sk_model.predict(X_test)
-
-sk_predict_time = time.perf_counter() - start
+    "Custom - Gain Ratio": {
+        "custom": DecisionTree(
+            max_depth=3,
+            criterion="entropy",
+            gain_ratio_=True
+        ),
+        "sklearn": None
+    }
+}
 
 
 # =====================================
-# 5. Evaluation function
+# 4. Evaluation function
 # =====================================
 
 def evaluate_model(name, y_true, y_pred):
 
-	print(f"\n========== {name} ==========")
+    print(f"\n========== {name} ==========")
 
-	print("Accuracy :", accuracy_score(y_true, y_pred))
+    print(f"Accuracy : {accuracy_score(y_true, y_pred):.4f}")
 
-	print(
-		"Precision:",
-		precision_score(y_true, y_pred, zero_division=0)
-	)
+    print(
+        f"Precision: "
+        f"{precision_score(y_true, y_pred, zero_division=0):.4f}"
+    )
 
-	print(
-		"Recall   :",
-		recall_score(y_true, y_pred, zero_division=0)
-	)
+    print(
+        f"Recall   : "
+        f"{recall_score(y_true, y_pred, zero_division=0):.4f}"
+    )
 
-	print(
-		"F1-score :",
-		f1_score(y_true, y_pred, zero_division=0)
-	)
+    print(
+        f"F1-score : "
+        f"{f1_score(y_true, y_pred, zero_division=0):.4f}"
+    )
 
-	print("\nConfusion Matrix:")
-	print(confusion_matrix(y_true, y_pred))
+    print("\nClassification Report:")
+    print(
+        classification_report(
+            y_true,
+            y_pred,
+            target_names=data.target_names,
+            zero_division=0
+        )
+    )
+
+    print("Confusion Matrix:")
+    print(confusion_matrix(y_true, y_pred))
 
 
 # =====================================
-# 6. Visualization functions
+# 5. Visualization functions
 # =====================================
 
-def plot_performance_comparison(y_test, my_predictions, sk_predictions):
+def plot_performance_comparison(results):
 
-	metrics = ["Accuracy", "Precision", "Recall", "F1-score"]
+    metrics = ["Accuracy", "Precision", "Recall", "F1-score"]
 
-	my_scores = [
-		accuracy_score(y_test, my_predictions),
-		precision_score(y_test, my_predictions, zero_division=0),
-		recall_score(y_test, my_predictions, zero_division=0),
-		f1_score(y_test, my_predictions, zero_division=0)
-	]
+    x = np.arange(len(metrics))
+    n_models = len(results)
+    width = 0.8 / n_models
 
-	sk_scores = [
-		accuracy_score(y_test, sk_predictions),
-		precision_score(y_test, sk_predictions, zero_division=0),
-		recall_score(y_test, sk_predictions, zero_division=0),
-		f1_score(y_test, sk_predictions, zero_division=0)
-	]
+    plt.figure(figsize=(12, 6))
 
-	x = np.arange(len(metrics))
-	width = 0.35
+    for i, (name, result) in enumerate(results.items()):
 
-	plt.figure(figsize=(10, 6))
+        scores = [
+            result["accuracy"],
+            result["precision"],
+            result["recall"],
+            result["f1"]
+        ]
 
-	plt.bar(x - width/2, my_scores, width, label="From Scratch")
-	plt.bar(x + width/2, sk_scores, width, label="Scikit-learn")
+        offset = (i - (n_models - 1) / 2) * width
 
-	plt.xticks(x, metrics)
-	plt.ylim(0, 1.1)
+        plt.bar(
+            x + offset,
+            scores,
+            width,
+            label=name
+        )
 
-	plt.ylabel("Score")
-	plt.title("Performance Comparison")
-	plt.legend()
-	plt.grid(axis="y", alpha=0.3)
+    plt.xticks(x, metrics)
+    plt.ylim(0, 1.1)
 
-	plt.tight_layout()
-	plt.show()
+    plt.ylabel("Score")
+    plt.title("Model Performance Comparison")
 
+    plt.legend()
+    plt.grid(axis="y", alpha=0.3)
 
-def plot_confusion_matrices(y_test, my_predictions, sk_predictions):
-
-	fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-
-	cm_my = confusion_matrix(y_test, my_predictions)
-	cm_sk = confusion_matrix(y_test, sk_predictions)
-
-	sns.heatmap(
-		cm_my,
-		annot=True,
-		fmt="d",
-		cmap="Blues",
-		xticklabels=data.target_names,
-		yticklabels=data.target_names,
-		ax=axes[0]
-	)
-
-	axes[0].set_title("From Scratch")
-	axes[0].set_xlabel("Predicted")
-	axes[0].set_ylabel("Actual")
-
-	sns.heatmap(
-		cm_sk,
-		annot=True,
-		fmt="d",
-		cmap="Greens",
-		xticklabels=data.target_names,
-		yticklabels=data.target_names,
-		ax=axes[1]
-	)
-
-	axes[1].set_title("Scikit-learn")
-	axes[1].set_xlabel("Predicted")
-	axes[1].set_ylabel("Actual")
-
-	plt.suptitle("Confusion Matrix Comparison")
-	plt.tight_layout()
-	plt.show()
+    plt.tight_layout()
+    plt.show()
 
 
-def plot_execution_time(
-	my_train_time,
-	sk_train_time,
-	my_predict_time,
-	sk_predict_time
-):
+def plot_confusion_matrices(results):
 
-	categories = ["Training", "Prediction"]
+    n_models = len(results)
 
-	custom_times = [my_train_time, my_predict_time]
-	sklearn_times = [sk_train_time, sk_predict_time]
+    fig, axes = plt.subplots(
+        1,
+        n_models,
+        figsize=(6 * n_models, 5)
+    )
 
-	x = np.arange(len(categories))
-	width = 0.35
+    if n_models == 1:
+        axes = [axes]
 
-	plt.figure(figsize=(9, 5))
+    for ax, (name, result) in zip(axes, results.items()):
 
-	plt.bar(
-		x - width/2,
-		custom_times,
-		width,
-		label="From Scratch"
-	)
+        sns.heatmap(
+            result["confusion_matrix"],
+            annot=True,
+            fmt="d",
+            cmap="Blues",
+            xticklabels=data.target_names,
+            yticklabels=data.target_names,
+            ax=ax
+        )
 
-	plt.bar(
-		x + width/2,
-		sklearn_times,
-		width,
-		label="Scikit-learn"
-	)
+        ax.set_title(name)
+        ax.set_xlabel("Predicted")
+        ax.set_ylabel("Actual")
 
-	plt.xticks(x, categories)
-	plt.ylabel("Time (seconds)")
-	plt.title("Execution Time Comparison")
-	plt.legend()
-	plt.grid(axis="y", alpha=0.3)
-
-	plt.tight_layout()
-	plt.show()
+    plt.suptitle("Confusion Matrix Comparison")
+    plt.tight_layout()
+    plt.show()
 
 
-def plot_prediction_agreement(my_predictions, sk_predictions):
+def plot_execution_time(results):
 
-	same = np.sum(my_predictions == sk_predictions)
-	different = len(my_predictions) - same
+    names = list(results.keys())
 
-	plt.figure(figsize=(7, 7))
+    train_times = [
+        results[name]["train_time"]
+        for name in names
+    ]
 
-	plt.pie(
-		[same, different],
-		labels=["Same Predictions", "Different Predictions"],
-		autopct="%1.2f%%",
-		colors=["#4CAF50", "#FF7043"],
-		startangle=90,
-		explode=(0.05, 0)
-	)
+    predict_times = [
+        results[name]["predict_time"]
+        for name in names
+    ]
 
-	plt.title("Prediction Agreement")
-	plt.tight_layout()
-	plt.show()
+    x = np.arange(len(names))
+    width = 0.35
+
+    plt.figure(figsize=(12, 6))
+
+    plt.bar(
+        x - width / 2,
+        train_times,
+        width,
+        label="Training"
+    )
+
+    plt.bar(
+        x + width / 2,
+        predict_times,
+        width,
+        label="Prediction"
+    )
+
+    plt.xticks(x, names, rotation=15)
+    plt.ylabel("Time (seconds)")
+    plt.title("Execution Time Comparison")
+
+    plt.legend()
+    plt.grid(axis="y", alpha=0.3)
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_prediction_agreement(results):
+
+    names = list(results.keys())
+
+    # Compare all custom models against the first custom model
+    reference_name = names[0]
+    reference_predictions = results[reference_name]["predictions"]
+
+    agreements = []
+
+    for name in names:
+
+        predictions = results[name]["predictions"]
+
+        agreement = np.mean(
+            predictions == reference_predictions
+        ) * 100
+
+        agreements.append(agreement)
+
+    plt.figure(figsize=(10, 5))
+
+    plt.bar(
+        names,
+        agreements,
+        color="steelblue"
+    )
+
+    plt.ylim(0, 105)
+    plt.ylabel("Agreement (%)")
+    plt.title(
+        f"Prediction Agreement vs {reference_name}"
+    )
+
+    plt.xticks(rotation=15)
+    plt.grid(axis="y", alpha=0.3)
+
+    plt.tight_layout()
+    plt.show()
 
 
 def plot_feature_importance(sk_model, feature_names):
 
-	importances = sk_model.feature_importances_
+    if sk_model is None:
+        return
 
-	indices = np.argsort(importances)[-10:]
+    importances = sk_model.feature_importances_
 
-	plt.figure(figsize=(10, 6))
+    indices = np.argsort(importances)[-10:]
 
-	plt.barh(
-		np.array(feature_names)[indices],
-		importances[indices],
-		color="steelblue"
-	)
+    plt.figure(figsize=(10, 6))
 
-	plt.xlabel("Importance")
-	plt.ylabel("Features")
-	plt.title("Top 10 Feature Importances - Scikit-learn")
+    plt.barh(
+        np.array(feature_names)[indices],
+        importances[indices],
+        color="steelblue"
+    )
 
-	plt.tight_layout()
-	plt.show()
+    plt.xlabel("Importance")
+    plt.ylabel("Features")
+    plt.title("Top 10 Feature Importances - Scikit-learn")
 
-
-# =====================================
-# 7. Compare execution time
-# =====================================
-
-print("\n========== TIME COMPARISON ==========")
-
-print(f"From scratch training : {my_train_time:.6f} seconds")
-print(f"Scikit-learn training : {sk_train_time:.6f} seconds")
-
-print(f"From scratch predict  : {my_predict_time:.6f} seconds")
-print(f"Scikit-learn predict  : {sk_predict_time:.6f} seconds")
+    plt.tight_layout()
+    plt.show()
 
 
 # =====================================
-# 8. Compare predictions
+# 6. Train and evaluate models
 # =====================================
 
-print("\n========== PREDICTION COMPARISON ==========")
+results = {}
 
-same_predictions = np.sum(
-	my_predictions == sk_predictions
-)
+for name, config in models.items():
 
-total_predictions = len(y_test)
+    print(f"\n========== {name} ==========")
 
-print(f"Same predictions: {same_predictions}/{total_predictions}")
+    # -----------------------------
+    # Custom model
+    # -----------------------------
+
+    custom_model = config["custom"]
+
+    start = time.perf_counter()
+
+    custom_model.fit(X_train, y_train)
+
+    train_time = time.perf_counter() - start
+
+    start = time.perf_counter()
+
+    predictions = np.array(
+        custom_model.predict(X_test)
+    )
+
+    predict_time = time.perf_counter() - start
+
+    results[name] = {
+        "predictions": predictions,
+        "train_time": train_time,
+        "predict_time": predict_time,
+        "accuracy": accuracy_score(y_test, predictions),
+        "precision": precision_score(
+            y_test, predictions, zero_division=0
+        ),
+        "recall": recall_score(
+            y_test, predictions, zero_division=0
+        ),
+        "f1": f1_score(
+            y_test, predictions, zero_division=0
+        ),
+        "confusion_matrix": confusion_matrix(
+            y_test, predictions
+        )
+    }
+
+    evaluate_model(name, y_test, predictions)
+
+    print(f"Training time  : {train_time:.6f} seconds")
+    print(f"Prediction time: {predict_time:.6f} seconds")
+
+    # -----------------------------
+    # Scikit-learn model
+    # -----------------------------
+
+    sk_model = config["sklearn"]
+
+    if sk_model is None:
+        continue
+
+    sk_name = name.replace("Custom", "Sklearn")
+
+    start = time.perf_counter()
+
+    sk_model.fit(X_train, y_train)
+
+    sk_train_time = time.perf_counter() - start
+
+    start = time.perf_counter()
+
+    sk_predictions = sk_model.predict(X_test)
+
+    sk_predict_time = time.perf_counter() - start
+
+    results[sk_name] = {
+        "predictions": sk_predictions,
+        "train_time": sk_train_time,
+        "predict_time": sk_predict_time,
+        "accuracy": accuracy_score(y_test, sk_predictions),
+        "precision": precision_score(
+            y_test, sk_predictions, zero_division=0
+        ),
+        "recall": recall_score(
+            y_test, sk_predictions, zero_division=0
+        ),
+        "f1": f1_score(
+            y_test, sk_predictions, zero_division=0
+        ),
+        "confusion_matrix": confusion_matrix(
+            y_test, sk_predictions
+        )
+    }
+
+    evaluate_model(sk_name, y_test, sk_predictions)
+
+    print(f"Training time  : {sk_train_time:.6f} seconds")
+    print(f"Prediction time: {sk_predict_time:.6f} seconds")
+
+    # Prediction agreement
+    agreement = np.mean(
+        predictions == sk_predictions
+    ) * 100
+
+    print(f"\nPrediction agreement: {agreement:.2f}%")
+
+
+# =====================================
+# 7. Summary
+# =====================================
+
+print("\n========== FINAL SUMMARY ==========")
 
 print(
-	f"Prediction agreement: "
-	f"{same_predictions / total_predictions * 100:.2f}%"
+    f"{'Model':<25}"
+    f"{'Accuracy':<12}"
+    f"{'Precision':<12}"
+    f"{'Recall':<12}"
+    f"{'F1-score':<12}"
 )
+
+print("-" * 73)
+
+for name, result in results.items():
+
+    print(
+        f"{name:<25}"
+        f"{result['accuracy']:<12.4f}"
+        f"{result['precision']:<12.4f}"
+        f"{result['recall']:<12.4f}"
+        f"{result['f1']:<12.4f}"
+    )
 
 
 # =====================================
-# 9. Visualization
+# 8. Visualization
 # =====================================
 
 print("\n========== VISUALIZATION ==========")
 
-# 1. Performance comparison
-plot_performance_comparison(
-	y_test,
-	my_predictions,
-	sk_predictions
-)
+plot_performance_comparison(results)
 
-# 2. Confusion matrices
-plot_confusion_matrices(
-	y_test,
-	my_predictions,
-	sk_predictions
-)
+plot_confusion_matrices(results)
 
-# 3. Execution time
-plot_execution_time(
-	my_train_time,
-	sk_train_time,
-	my_predict_time,
-	sk_predict_time
-)
+plot_execution_time(results)
 
-# 4. Prediction agreement
-plot_prediction_agreement(
-	my_predictions,
-	sk_predictions
-)
+plot_prediction_agreement(results)
 
-# 5. Feature importance
+# Plot feature importance from sklearn Gini model
 plot_feature_importance(
-	sk_model,
-	data.feature_names
+    models["Custom - Gini"]["sklearn"],
+    data.feature_names
 )
