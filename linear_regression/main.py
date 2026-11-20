@@ -43,7 +43,7 @@ X_test = scaler.fit_transform(X_test)
 
 custom_model = LinearRegression(
 	learning_rate=0.01,
-	n_iters=10000,
+	iterations=10000,
 	method="gradients_descent")
 
 custom_model.fit(X_train, y_train)
