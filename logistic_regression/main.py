@@ -97,7 +97,7 @@ def evaluate_model(y_true, y_pred, y_prob):
 			"Accuracy": accuracy,
 			"Precision": precision,
 			"Recall": recall,
-			"F1 Score": f1_score,
+			"F1 Score": f1,
 			"ROC AUC Curve": auc
 			}
 
